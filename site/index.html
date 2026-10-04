@@ -605,7 +605,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 // Cópia no próprio celular: na mina o sinal cai, e a marcação feita sem
 // internet fica guardada e sobe sozinha quando o sinal volta.
-const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+// "Long polling" em vez da conexão contínua padrão: rede de empresa e de
+// proxy derruba a conexão contínua (no teste, ERR_TOO_MANY_RETRIES e o app
+// sem máquinas). Pedidos comuns passam por onde ela não passa.
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  experimentalForceLongPolling: true
+});
 
 // ---------- A chave do link ----------
 // Sem senha, a pedido da dona: os dados moram em frotas/<chave>, e a chave
@@ -625,7 +631,9 @@ var raiz = chave ? "frotas/" + chave : "";
 function lista(snap){ return snap.docs.map(function(d){ var o = Object.assign({}, d.data()); o.id = d.id; return o; }); }
 
 const banco = {
-  ouvirMaquinas: function(cb){ return onSnapshot(collection(db, raiz, "maquinas"), function(s){ cb(lista(s)); }, falhouLeitura); },
+  // Lista vazia vinda só da cópia do celular não é "nenhuma máquina": é
+  // "ainda não falei com o banco". Mostrar o aviso de vazio aí seria mentir.
+  ouvirMaquinas: function(cb){ return onSnapshot(collection(db, raiz, "maquinas"), function(s){ if (s.empty && s.metadata.fromCache) return; cb(lista(s)); }, falhouLeitura); },
   addMaquina: function(m){ return addDoc(collection(db, raiz, "maquinas"), m); },
   delMaquina: function(id){ return deleteDoc(doc(db, raiz, "maquinas", id)); },
   ouvirDia: function(data, cb){ return onSnapshot(doc(db, raiz, "dias", data), function(s){ cb(s.exists() ? s.data() : null); }, falhouLeitura); },
@@ -640,7 +648,12 @@ const banco = {
 // ---------- Abrir ----------
 $("abrindo").hidden = true;
 $("tela-app").hidden = false;
-if (raiz) iniciar(banco);
+if (raiz){
+  iniciar(banco);
+  // Sem resposta do banco em 12 s: diz o que está acontecendo, em vez de
+  // deixar "Carregando…" para sempre.
+  setTimeout(function(){ if (!est.pronto) avisar("Não consegui falar com o banco. Confira a internet; assim que o sinal voltar, as máquinas aparecem sozinhas."); }, 12000);
+}
 else { est.pronto = true; avisar("Abra o app pelo link que a Lorena mandou. Sem ele, o app não sabe onde estão as máquinas."); montar(); }
 </script>
 </body>
