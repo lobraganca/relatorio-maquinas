@@ -14,8 +14,10 @@ Avena) nem com o `catalogo-de-pecas`. A dona pede os apps separados.
 - Coleções, debaixo de `frotas/<chave>/`: `maquinas/{numero}` (`tipo`, `numero`, `ordem`),
   `dias/{AAAA-MM-DD}` (`data`, `itens` com `{s, obs, numero, tipo}` por
   máquina; `s` é `ok`, `manut` ou `parada`), `config/geral` (`cabecalho`).
-- As regras do banco são coladas à mão no console. O `firestore.rules` daqui
-  é modelo, com uma chave de exemplo.
+- As regras do banco (`firestore.rules`) não guardam a chave: exigem só uma
+  chave de 28+ caracteres e as três coleções. Publicar: `python3 regra.py`
+  no Cloud Shell (a dona não conseguiu colar na caixa do console pelo
+  celular).
 - **Não pôr a lista da frota no código.** Número de máquina e defeito são
   dados do serviço do pai da dona; moram só no banco.
 - O relatório: o número no título de cada tipo é quantas estão FUNCIONANDO

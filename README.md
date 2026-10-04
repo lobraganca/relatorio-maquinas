@@ -24,8 +24,12 @@ um `index.html` só.
 
 O repositório é público. Por isso **a lista das máquinas e a chave do link
 não estão aqui**: a lista mora no banco, e a chave mora só no link e nas
-regras do Firestore, coladas no console. O arquivo `firestore.rules` é o
-modelo dessas regras, com uma chave de exemplo.
+regras do Firestore, coladas no console. O arquivo `firestore.rules` são as regras
+do banco; não têm nada secreto (exigem só uma chave longa, sem dizer qual).
+
+Para publicá-las sem colar nada, pelo celular: abra
+https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/lobraganca/relatorio-maquinas&shellonly=true
+confirme, e digite `python3 regra.py`.
 
 A configuração do Firebase dentro do `index.html` não é segredo: vai dentro
 de todo site com Firebase. Quem protege os dados é a chave do link, conferida pelas regras.
