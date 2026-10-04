@@ -1,0 +1,14 @@
+// Regras do banco (Firestore). Elas NÃO sobem sozinhas: são coladas à mão
+// no console do Firebase, em Firestore Database > Regras.
+//
+// Sem senha, a pedido da dona: os dados moram em frotas/<chave>, e só a
+// chave certa abre. A chave de verdade fica SÓ no console e no link que ela
+// manda — este repositório é público. Aqui vai um exemplo no lugar dela.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /frotas/{chave}/{documento=**} {
+      allow read, write: if chave == 'TROQUE-PELA-CHAVE-DO-LINK';
+    }
+  }
+}

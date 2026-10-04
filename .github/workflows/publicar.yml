@@ -1,0 +1,36 @@
+name: Publicar o site
+
+# Todo push na main publica a pasta site/ no GitHub Pages. Também dá para
+# disparar à mão em Actions > Publicar o site > Run workflow.
+#
+# Pré-requisito, feito UMA vez: Settings > Pages > Source: "GitHub Actions".
+# Sem isso o passo "configure-pages" falha com "Get Pages site failed" — não
+# é defeito do código, é o Pages ainda desligado.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publicacao.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: publicacao
+        uses: actions/deploy-pages@v4

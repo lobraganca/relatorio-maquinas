@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#073a5c">
+<meta name="robots" content="noindex">
+<title>Relatório das Máquinas</title>
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/*
+ * Layout: o mesmo do Consulta de Peças — barra azul-marinho em cima, conteúdo
+ * claro numa coluna, um cartão branco por tipo de máquina. Uma tela só.
+ * Tokens com os mesmos nomes do catalogo-de-pecas/src/estilos.css. Tema único
+ * claro, como o app de peças: todas as cores definidas aqui, fundo explícito.
+ */
+:root{
+  --primary-50:#eef4fa; --primary-100:#dbe7f3; --primary-600:#0f84cc; --primary-800:#0a4f7d; --primary-900:#073a5c; --primary-950:#395a86;
+  --neutral-0:#ffffff; --neutral-50:#f8fafc; --neutral-100:#f1f5f9; --neutral-200:#e2e8f0; --neutral-300:#cbd5e1;
+  --neutral-400:#94a3b8; --neutral-500:#64748b; --neutral-600:#475569; --neutral-700:#334155; --neutral-900:#0f172a;
+  --info-bg:#eff6ff; --info-border:#bfdbfe; --info-text:#1e40af;
+  --success-bg:#f0fdf4; --success-border:#bbf7d0; --success-text:#166534; --success-line:#4ade80;
+  --warning-bg:#fff1eb; --warning-border:#ffc9ad; --warning-text:#993300; --warning-line:#fb923c;
+  --danger-bg:#fef2f2; --danger-border:#fecaca; --danger-text:#991b1b; --danger-line:#f87171; --danger:#dc2626;
+  --fonte:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px;
+  --raio-sm:6px; --raio-md:8px; --raio-lg:12px; --raio-pilula:999px;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;padding-top:env(safe-area-inset-top,0px);background:var(--neutral-50);color:var(--neutral-700);font-family:var(--fonte);font-size:15px;line-height:22px;-webkit-font-smoothing:antialiased}
+p{margin:0}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--primary-600);outline-offset:2px}
+button:disabled{cursor:default;opacity:.55}
+
+/* ---------- Barra de cima ---------- */
+.menu{background:var(--primary-900);color:var(--neutral-0);padding-inline:16px;padding-block:12px}
+.marca{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:var(--space-3)}
+.marca svg{width:36px;height:36px;flex:none;border-radius:9px;box-shadow:0 0 0 1.5px rgb(255 255 255 / .22)}
+.marca-nome{font-size:15px;line-height:20px;font-weight:600;color:var(--neutral-0)}
+
+/* ---------- Conteúdo ---------- */
+.conteudo{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:20px 120px;display:flex;flex-direction:column;gap:var(--space-5)}
+.cabecalho h1{margin:0;font-size:22px;line-height:30px;font-weight:700;color:var(--neutral-900);letter-spacing:-.01em}
+.cabecalho h1::first-letter{text-transform:uppercase}
+.cabecalho p{font-size:15px;color:var(--neutral-600)}
+
+.secao-topo{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-2)}
+.secao-titulo{font-size:11px;line-height:16px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--neutral-400)}
+/*
+ * Cada tipo é um bloco sempre aberto (abrir e fechar foi testado e a dona
+ * não gostou). O que separa um tipo do outro é a faixa azul-marinho do
+ * título, a mesma cor da barra de cima, e o espaço entre os blocos. A faixa
+ * gruda no alto da tela ao rolar: numa lista de 20 caminhões, ele não perde
+ * de vista em que tipo está.
+ */
+.grupo{background:var(--neutral-0);border:1px solid var(--neutral-200);border-radius:var(--raio-lg)}
+.grupo-cab{position:sticky;top:env(safe-area-inset-top,0px);z-index:2;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:var(--space-2) var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--raio-lg) var(--raio-lg) 0 0;border-bottom:1px solid var(--primary-100);background:var(--primary-50);color:var(--primary-900)}
+.grupo-icone{grid-row:span 2;width:52px;height:52px;border-radius:var(--raio-md);background:var(--neutral-0);border:1px solid var(--primary-100);display:grid;place-items:center;color:var(--primary-950)}
+.grupo-icone svg{width:40px;height:40px}
+.grupo-nome{font-size:18px;line-height:24px;font-weight:700}
+.resumo{display:flex;flex-wrap:wrap;gap:6px}
+.pilula{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:var(--raio-pilula);border:1px solid;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pilula.ok{background:var(--success-bg);border-color:var(--success-border);color:var(--success-text)}
+.pilula.manut{background:var(--warning-bg);border-color:var(--warning-border);color:var(--warning-text)}
+.pilula.parada{background:var(--danger-bg);border-color:var(--danger-border);color:var(--danger-text)}
+.pilula.falta{background:var(--neutral-100);border-color:var(--neutral-200);color:var(--neutral-600)}
+.grupo-corpo .maq:last-child{border-bottom:0}
+.botao-texto{height:32px;padding:0 var(--space-2);border:0;border-radius:var(--raio-sm);background:none;font-size:13px;font-weight:600;color:var(--primary-950)}
+.botao-texto:hover{background:var(--neutral-100)}
+.linha-acoes{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3)}
+
+.cartao{background:var(--neutral-0);border:1px solid var(--neutral-200);border-radius:var(--raio-lg);overflow:hidden}
+
+/* Uma máquina: o número em cima, os três botões embaixo, o motivo por último. */
+.maq{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--neutral-200);display:flex;flex-direction:column;gap:var(--space-2)}
+.maq:last-child{border-bottom:0}
+.maq-num{display:flex;align-items:center;gap:var(--space-2);font-size:17px;line-height:24px;font-weight:700;color:var(--neutral-900);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+/* A bolinha na frente do número: a cor do estado; vazia enquanto não marcada. */
+.ponto{flex:none;width:14px;height:14px;border-radius:50%;border:2px solid var(--neutral-300);background:var(--neutral-0)}
+.ponto.ok{background:#22c55e;border-color:#22c55e}
+.ponto.manut{background:#f97316;border-color:#f97316}
+.ponto.parada{background:#ef4444;border-color:#ef4444}
+.estados{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2)}
+.estado{height:46px;padding:0 2px;border:1.5px solid var(--neutral-200);border-radius:var(--raio-md);background:var(--neutral-0);color:var(--neutral-500);font-size:14px;font-weight:500}
+.estado:hover{border-color:var(--neutral-300)}
+.estado[aria-pressed="true"]{font-weight:700}
+.estado[data-s="ok"][aria-pressed="true"]{background:var(--success-bg);border-color:var(--success-line);color:var(--success-text)}
+.estado[data-s="manut"][aria-pressed="true"]{background:var(--warning-bg);border-color:var(--warning-line);color:var(--warning-text)}
+.estado[data-s="parada"][aria-pressed="true"]{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger-text)}
+
+/* 16px no campo: no iPhone, letra menor faz a página dar zoom ao tocar. */
+input[type="text"],select{width:100%;height:48px;padding:0 14px;font-size:16px;color:var(--neutral-900);background:var(--neutral-0);border:1px solid var(--neutral-200);border-radius:var(--raio-md)}
+input[type="text"]:focus,select:focus{outline:none;border-color:var(--primary-600);box-shadow:0 0 0 3px rgb(15 132 204 / .15)}
+input::placeholder{color:var(--neutral-400)}
+input.obs{height:44px;background:var(--neutral-50)}
+
+.remover{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);font-size:14px;font-weight:600}
+
+/* ---------- Botões do padrão ---------- */
+.botao{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);height:48px;padding:0 var(--space-4);border:1px solid transparent;border-radius:var(--raio-md);font-size:15px;font-weight:600;text-decoration:none}
+.botao-primario{background:var(--primary-950);color:var(--neutral-0)}
+.botao-primario:hover{background:var(--primary-800)}
+.botao-secundario{background:var(--neutral-100);color:var(--primary-950)}
+.botao-secundario:hover{background:var(--neutral-200)}
+.botao-perigo{background:var(--danger-bg);border-color:var(--danger-border);color:var(--danger-text)}
+.botao-pequeno{height:40px;font-size:14px}
+.botao svg{width:20px;height:20px;flex:none}
+
+.form-add{display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4)}
+.form-add .linha{display:flex;gap:var(--space-2)}
+.form-add .linha input{flex:1;min-width:0}
+.form-add .linha .botao{flex:none}
+.recado-add{font-size:13px;font-weight:600;color:var(--success-text);min-height:18px}
+
+.alerta{padding:var(--space-3) var(--space-4);border:1px solid;border-radius:var(--raio-lg)}
+.alerta-titulo{font-weight:600}
+.alerta-info{background:var(--info-bg);border-color:var(--info-border);color:var(--info-text)}
+.alerta-warning{background:var(--warning-bg);border-color:var(--warning-border);color:var(--warning-text)}
+
+/* ---------- Botão do relatório, fixo embaixo ---------- */
+.rodape-fixo{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--neutral-0);border-top:1px solid var(--neutral-200);padding-inline:16px;padding-block:12px calc(12px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 16px rgb(15 23 42 / .06)}
+.rodape-fixo .botao{width:100%;max-width:688px;margin:0 auto;display:flex;height:54px;font-size:16px}
+
+/* ---------- Relatório ---------- */
+.painel{position:fixed;inset:0;z-index:10;background:rgb(15 23 42 / .45);display:flex;align-items:flex-end;justify-content:center;padding-top:env(safe-area-inset-top,0px)}
+.painel-caixa{width:100%;max-width:720px;max-height:92%;overflow:auto;background:var(--neutral-0);color:var(--neutral-700);border-radius:16px 16px 0 0;padding-inline:16px;padding-block:20px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:var(--space-4)}
+.painel-topo{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
+.painel-topo h2{margin:0;font-size:20px;line-height:28px;font-weight:700;color:var(--neutral-900)}
+.contas{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2)}
+.conta{border:1px solid;border-radius:var(--raio-md);padding:var(--space-2) var(--space-3);min-width:0}
+.conta b{display:block;font-size:24px;line-height:30px;font-variant-numeric:tabular-nums}
+.conta span{font-size:12px;font-weight:600;overflow-wrap:anywhere}
+.conta.ok{background:var(--success-bg);border-color:var(--success-border);color:var(--success-text)}
+.conta.manut{background:var(--warning-bg);border-color:var(--warning-border);color:var(--warning-text)}
+.conta.parada{background:var(--danger-bg);border-color:var(--danger-border);color:var(--danger-text)}
+.texto{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--fonte);font-size:14px;line-height:21px;color:var(--neutral-900);background:var(--neutral-50);border:1px solid var(--neutral-200);border-radius:var(--raio-md);padding:var(--space-3) var(--space-4)}
+.acoes{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
+.recado{font-size:14px;font-weight:600;color:var(--success-text);min-height:20px}
+.discreto{font-size:13px;color:var(--neutral-500)}
+
+</style>
+</head>
+<body>
+<header class="menu">
+  <div class="marca">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="14" fill="#395A86"></rect>
+      <path d="M32 12 49.3 22v20L32 52 14.7 42V22Z" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"></path>
+      <circle cx="32" cy="32" r="8" fill="none" stroke="#fff" stroke-width="5"></circle>
+    </svg>
+    <p class="marca-nome">Relatório das Máquinas - Amarildo Bragança</p>
+  </div>
+</header>
+
+<p class="discreto" id="abrindo" style="text-align:center;padding:40px 16px">Abrindo…</p>
+
+
+<div id="tela-app" hidden>
+<main class="conteudo">
+  <div class="cabecalho">
+    <h1 id="hoje">Hoje</h1>
+    <p id="instrucao">Toque no estado de cada máquina.</p>
+  </div>
+
+  <div class="alerta alerta-warning" id="aviso" role="status" hidden></div>
+  <div class="alerta alerta-info" id="herdado" role="status" hidden></div>
+
+  <p class="discreto" id="carregando">Carregando…</p>
+  <div class="alerta alerta-info" id="vazio" hidden>
+    <p class="alerta-titulo">Nenhuma máquina ainda</p>
+    <p>Cadastre lá embaixo o tipo e o número de cada máquina. É só uma vez.</p>
+  </div>
+
+  <div id="grupos" style="display:flex;flex-direction:column;gap:var(--space-6)"></div>
+
+  <section aria-labelledby="titulo-add">
+    <div class="linha-acoes secao-topo">
+      <p class="secao-titulo" id="titulo-add">Adicionar máquina</p>
+      <button type="button" class="botao-texto" id="editar" hidden>Remover máquina</button>
+    </div>
+    <form class="cartao form-add" id="form-add" novalidate>
+      <select id="tipo" aria-label="Tipo da máquina"></select>
+      <input type="text" id="tipo-novo" placeholder="Nome do tipo, ex.: Caminhões" aria-label="Nome do tipo novo" maxlength="40" hidden>
+      <div class="linha">
+        <input type="text" id="numero" placeholder="Número, ex.: CB5164" aria-label="Número da máquina" autocomplete="off" autocapitalize="characters" maxlength="20" enterkeyhint="done">
+        <button type="submit" class="botao botao-secundario">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>
+          Adicionar
+        </button>
+      </div>
+      <p class="recado-add" id="recado-add" aria-live="polite"></p>
+    </form>
+  </section>
+
+</main>
+
+<div class="rodape-fixo">
+  <button type="button" class="botao botao-primario" id="gerar">Gerar relatório</button>
+</div>
+
+<div class="painel" id="painel" hidden>
+  <div class="painel-caixa" role="dialog" aria-modal="true" aria-labelledby="painel-titulo">
+    <div class="painel-topo">
+      <h2 id="painel-titulo">Relatório de hoje</h2>
+      <button type="button" class="botao botao-secundario botao-pequeno" id="fechar">Fechar</button>
+    </div>
+    <div class="contas" id="contas"></div>
+    <pre class="texto" id="texto" tabindex="0"></pre>
+    <div class="acoes">
+      <button type="button" class="botao botao-primario" id="copiar">Copiar</button>
+      <a class="botao botao-secundario" id="whatsapp" href="https://wa.me/" target="_blank" rel="noopener">WhatsApp</a>
+    </div>
+    <p class="recado" id="recado" aria-live="polite"></p>
+  </div>
+</div>
+</div>
+
+<script type="module">
+
+// ---------- Firebase: login e banco ----------
+// Versão fixa do SDK: trocar de versão é uma decisão, não um acidente.
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot,
+  addDoc, deleteDoc, setDoc, getDocs, query, where, orderBy, limit }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
+// ---------- O app ----------
+
+  var OUTRO = "__outro__";
+  // Os três estados. A marca é o que aparece ao lado do número no relatório.
+  var ESTADOS = [
+    {k:"ok",     nome:"Funcionando", texto:"Funcionando",   marca:"✅"},
+    {k:"manut",  nome:"Manutenção",  texto:"Em manutenção", marca:"🔧"},
+    {k:"parada", nome:"Parada",      texto:"Parada",        marca:"❌"}
+  ];
+  var porChave = {}; ESTADOS.forEach(function(e){ porChave[e.k] = e; });
+  function temMotivo(s){ return s === "manut" || s === "parada"; }
+
+  var $ = function(id){ return document.getElementById(id); };
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
+  function clonar(o){ return JSON.parse(JSON.stringify(o)); }
+  function hoje(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+  function deIso(s){ var p = s.split("-").map(Number); return new Date(p[0], p[1]-1, p[2]); }
+  function dataBr(s){ return deIso(s).toLocaleDateString("pt-BR"); }
+  function numeroDe(m){ return m.numero || m.nome || "?"; }
+
+  var est = { cabecalho: "", data: hoje(), maquinas: [], dia: {itens:{}}, herdadoDe: null, pronto: false, editando: false, apagando: null, soLeitura: false };
+  var store = null;
+
+  function avisar(t){ $("aviso").textContent = t; $("aviso").hidden = !t; }
+  // O banco recusa chave errada: "permission-denied".
+  var SEM_PERMISSAO = "Este link não abre as máquinas. Confira se você abriu pelo link completo que a Lorena mandou.";
+  function falhouLeitura(e){
+    if (e && e.code === "permission-denied"){ est.pronto = true; avisar(SEM_PERMISSAO); montar(); }
+    else console.warn("leitura falhou", e);
+  }
+  function falhou(e){
+    if (e && e.code === "permission-denied"){
+      est.soLeitura = true;
+      avisar(SEM_PERMISSAO);
+      montar();
+    } else {
+      console.warn("gravação falhou", e);
+      avisar("Não consegui salvar. Confira a internet e toque de novo.");
+    }
+  }
+
+  // ---------- Gravação do dia: uma por vez, sempre a mais nova ----------
+  var pendente = null, gravando = false, espera = null;
+  function salvarDia(atraso){
+    if (est.soLeitura) return;
+    est.dia.data = est.data;
+    pendente = {data: est.data, corpo: clonar(est.dia)};
+    clearTimeout(espera);
+    if (atraso) espera = setTimeout(esvaziar, atraso); else esvaziar();
+  }
+  async function esvaziar(){
+    if (gravando) return;
+    gravando = true;
+    while (pendente){
+      var p = pendente; pendente = null;
+      try { await store.salvarDia(p.data, p.corpo); }
+      catch(e){
+        if (e && e.code === "unavailable"){
+          await new Promise(function(r){ setTimeout(r, 1000); });
+          try { await store.salvarDia(p.data, p.corpo); } catch(e2){ gravando = false; falhou(e2); return; }
+        } else { gravando = false; falhou(e); return; }
+      }
+    }
+    gravando = false;
+    if (!$("aviso").hidden && !est.soLeitura) avisar("");
+  }
+
+  // O dia novo começa igual ao último relatório: máquina parada esperando
+  // peça continua parada amanhã, e ele só mexe no que mudou.
+  var pararDia = null;
+  function ouvirDia(){
+    if (pararDia) pararDia();
+    var data = est.data;
+    est.dia = {itens:{}}; est.herdadoDe = null;
+    pararDia = store.ouvirDia(data, function(corpo){
+      if (data !== est.data || pendente || gravando) return;
+      if (corpo){
+        est.dia = clonar(corpo);
+        if (!est.dia.itens) est.dia.itens = {};
+        atualizar();
+        return;
+      }
+      store.ultimoAntes(data).then(function(ant){
+        if (data !== est.data || pendente || gravando || est.dia.data) return;
+        est.dia = {itens: ant && ant.itens ? clonar(ant.itens) : {}};
+        est.herdadoDe = ant ? ant.data : null;
+        atualizar();
+      });
+    });
+  }
+
+  function iniciar(s){
+    store = s;
+    s.ouvirMaquinas(function(lista){
+      lista.sort(function(a,b){ return (a.ordem||0) - (b.ordem||0); });
+      est.maquinas = lista; est.pronto = true;
+      montar();
+    });
+    s.ouvirConfig(function(c){ est.cabecalho = (c && c.cabecalho) || ""; if (!$("painel").hidden) montarRelatorio(); });
+    ouvirDia();
+  }
+
+
+  // ---------- Ícone de cada tipo ----------
+  // Desenhos de traço, 48×48, na cor do texto. O tipo é reconhecido pelo
+  // começo do nome, então "Caminhões" e "Caminhão" dão no mesmo desenho.
+  var RODA = function(x, y, r){ return '<circle cx="' + x + '" cy="' + y + '" r="' + (r || 5) + '"/><circle cx="' + x + '" cy="' + y + '" r="1.5" fill="currentColor"/>'; };
+  var ICONES = {
+    // basculante: caçamba inclinada atrás, cabine na frente
+    caminhao: '<path d="M4 30 8 15h22v15"/><path d="M30 30V19h8l6 7v4"/><path d="M33 19v6h9"/><path d="M3 30h42"/>' + RODA(12,35) + RODA(37,35),
+    // tanque redondo com uma gota d'água
+    pipa: '<rect x="4" y="15" width="25" height="14" rx="7"/><path d="M30 30V19h8l6 7v4"/><path d="M3 30h42"/><path d="M16.5 18.5c2 2.6 3 3.9 3 5.2a3 3 0 0 1-6 0c0-1.3 1-2.6 3-5.2z"/>' + RODA(12,35) + RODA(37,35),
+    // baú com bomba e mangueira enrolada
+    comboio: '<rect x="4" y="13" width="25" height="17" rx="2"/><circle cx="16.5" cy="21.5" r="4.5"/><path d="M16.5 21.5h6"/><path d="M30 30V19h8l6 7v4"/><path d="M3 30h42"/>' + RODA(12,35) + RODA(37,35),
+    // esteira embaixo, casa com cabine, lança e braço com caçamba
+    escavadeira: '<rect x="3" y="35" width="26" height="8" rx="4"/><path d="M5 35v-9h20v9"/><path d="M8 26v-8h8v8"/><path d="M23 26 33 9l9 12"/><path d="M42 21l3 8h-8z"/>',
+    // trator de pneus com caçamba na frente e braço atrás
+    retroescavadeira: '<path d="M12 31v-8h22v8"/><path d="M17 23V12h10v11"/><path d="M34 27l6 2"/><path d="M39 24h7l-1 9h-6z"/><path d="M12 25 6 13 2 22"/><path d="M2 22l1 6 4-2"/>' + RODA(17,36,6) + RODA(33,37,4),
+    // carregadeira: pneus grandes iguais e caçamba grande na frente
+    carregadeira: '<path d="M8 31v-9h24v9"/><path d="M12 22V11h11v11"/><path d="M30 25l7 1"/><path d="M36 18h9l-1 15h-8z"/>' + RODA(14,36,6) + RODA(30,36,6),
+    // esteira longa, cabine e lâmina curva na frente
+    trator: '<rect x="4" y="33" width="30" height="10" rx="5"/><circle cx="10" cy="38" r="2"/><circle cx="19" cy="38" r="2"/><circle cx="28" cy="38" r="2"/><path d="M7 33v-9h24v9"/><path d="M11 24V13h11v11"/><path d="M31 28h7"/><path d="M38 18c5 6 5 14 1 22"/>',
+    // motoniveladora: roda na ponta, viga comprida, lâmina no meio, cabine atrás
+    motoniveladora: '<path d="M7 33V25h22"/><path d="M27 31v-7h18v7"/><path d="M30 24V12h10v12"/><path d="M17 25v7"/><path d="M11 34l14-3"/>' + RODA(7,37,4) + RODA(33,37,4) + RODA(42,37,4),
+    // tipo que não está na lista: um veículo de obra genérico
+    outro: '<path d="M6 31v-9h34v9"/><path d="M26 22V11h11v11"/><path d="M4 31h40"/>' + RODA(13,36) + RODA(35,36)
+  };
+  function iconeDe(tipo){
+    var t = String(tipo).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    var k = t.indexOf("retro") === 0 ? "retroescavadeira"
+      : t.indexOf("escav") === 0 ? "escavadeira"
+      : t.indexOf("caminh") === 0 ? "caminhao"
+      : t.indexOf("carreg") === 0 ? "carregadeira"
+      : t.indexOf("pipa") === 0 ? "pipa"
+      : t.indexOf("comboio") === 0 ? "comboio"
+      : t.indexOf("trator") === 0 ? "trator"
+      : t.indexOf("motonivel") === 0 ? "motoniveladora"
+      : "outro";
+    return '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONES[k] + '</svg>';
+  }
+
+  // ---------- Grupos por tipo, na ordem em que foram cadastrados ----------
+  function grupos(){
+    var porTipo = {}, ordem = [];
+    est.maquinas.forEach(function(m){
+      var t = m.tipo || "Máquinas";
+      if (!porTipo[t]){ porTipo[t] = []; ordem.push(t); }
+      porTipo[t].push(m);
+    });
+    return ordem.map(function(t){ return {tipo: t, maquinas: porTipo[t]}; });
+  }
+
+  // ---------- Tela ----------
+  function item(m){
+    var it = est.dia.itens[m.id] || (est.dia.itens[m.id] = {});
+    it.numero = numeroDe(m); it.tipo = m.tipo || "";
+    return it;
+  }
+
+  // Monta tudo (quando muda a lista de máquinas ou o modo de remover).
+  var indice = [];
+  function montar(){
+    var tem = est.maquinas.length > 0;
+    if (!tem) est.editando = false;
+    $("carregando").hidden = est.pronto;
+    $("vazio").hidden = !est.pronto || tem;
+    $("editar").hidden = !tem || est.soLeitura;
+    $("editar").textContent = est.editando ? "Pronto" : "Remover máquina";
+    indice = [];
+    $("grupos").innerHTML = grupos().map(function(g, gi){
+      var linhas = g.maquinas.map(function(m){
+        var i = indice.push(m) - 1;
+        var num = esc(numeroDe(m));
+        var corpo;
+        if (est.editando){
+          corpo = est.apagando === m.id
+            ? '<div class="remover">Tirar da lista? <button type="button" class="botao botao-perigo botao-pequeno" data-sim="' + i + '">Sim, tirar</button><button type="button" class="botao botao-secundario botao-pequeno" data-nao="1">Não</button></div>'
+            : '<button type="button" class="botao botao-perigo botao-pequeno" data-apagar="' + i + '">Remover</button>';
+        } else {
+          corpo = '<div class="estados" role="group" aria-label="Estado da ' + num + '">' +
+            ESTADOS.map(function(e){ return '<button type="button" class="estado" data-i="' + i + '" data-s="' + e.k + '" aria-pressed="false">' + e.nome + '</button>'; }).join("") +
+            '</div><input type="text" class="obs" id="obs-' + i + '" data-i="' + i + '" placeholder="O que houve? Ex.: aguardando peça" aria-label="O que houve com a ' + num + '" maxlength="160" hidden>';
+        }
+        return '<div class="maq"><p class="maq-num"><span class="ponto" id="ponto-' + i + '" aria-hidden="true"></span>' + num + '</p>' + corpo + '</div>';
+      }).join("");
+      return '<section class="grupo" aria-labelledby="nome-' + gi + '">' +
+        '<div class="grupo-cab"><span class="grupo-icone">' + iconeDe(g.tipo) + '</span><h2 class="grupo-nome" id="nome-' + gi + '" style="margin:0">' + esc(g.tipo) + '</h2>' +
+          '<p class="resumo" id="resumo-' + gi + '"></p></div>' +
+        '<div class="grupo-corpo">' + linhas + '</div></section>';
+    }).join("");
+
+    // A caixa de tipos sai dos tipos já cadastrados.
+    var sel = $("tipo"), atual = sel.value;
+    var tipos = grupos().map(function(g){ return g.tipo; });
+    sel.innerHTML = tipos.map(function(t){ return '<option value="' + esc(t) + '">' + esc(t) + '</option>'; }).join("") +
+      '<option value="' + OUTRO + '">Outro tipo…</option>';
+    if (atual && (tipos.indexOf(atual) >= 0 || atual === OUTRO)) sel.value = atual;
+    $("tipo-novo").hidden = sel.value !== OUTRO;
+    $("form-add").querySelectorAll("input,select,button").forEach(function(c){ c.disabled = est.soLeitura; });
+    atualizar();
+  }
+
+  // Atualiza só os botões e as contas, sem refazer as linhas (não tira o foco de quem digita).
+  function atualizar(){
+    var feitas = 0;
+    indice.forEach(function(m, i){
+      var it = est.dia.itens[m.id] || {};
+      if (it.s) feitas++;
+      document.querySelectorAll('.estado[data-i="' + i + '"]').forEach(function(b){
+        b.setAttribute("aria-pressed", String(b.dataset.s === it.s));
+        b.disabled = est.soLeitura;
+      });
+      var ponto = $("ponto-" + i);
+      if (ponto) ponto.className = "ponto" + (porChave[it.s] ? " " + it.s : "");
+      var obs = $("obs-" + i);
+      if (obs){
+        obs.hidden = !temMotivo(it.s);
+        obs.disabled = est.soLeitura;
+        if (document.activeElement !== obs) obs.value = it.obs || "";
+      }
+    });
+    grupos().forEach(function(g, gi){
+      var el = $("resumo-" + gi); if (!el) return;
+      var c = {ok:0, manut:0, parada:0, falta:0};
+      g.maquinas.forEach(function(m){ var s = (est.dia.itens[m.id] || {}).s; c[porChave[s] ? s : "falta"]++; });
+      var p = ['<span class="pilula ok">' + c.ok + ' de ' + g.maquinas.length + ' funcionando</span>'];
+      p.push('<span class="pilula manut">' + c.manut + ' em manutenção</span>');
+      p.push('<span class="pilula parada">' + c.parada + (c.parada === 1 ? ' parada' : ' paradas') + '</span>');
+      if (c.falta) p.push('<span class="pilula falta">' + c.falta + ' sem marcar</span>');
+      el.innerHTML = p.join("");
+    });
+    var total = est.maquinas.length;
+    var her = $("herdado");
+    her.hidden = !est.herdadoDe;
+    if (est.herdadoDe) her.textContent = "Começou igual ao relatório de " + dataBr(est.herdadoDe) + ". Mude só o que mudou hoje.";
+    $("instrucao").textContent = total && feitas < total ? "Faltam " + (total - feitas) + " de " + total + " máquinas. Toque no estado de cada uma." : "Toque no estado de cada máquina.";
+    $("hoje").textContent = deIso(est.data).toLocaleDateString("pt-BR", {weekday:"long", day:"numeric", month:"long"});
+    $("gerar").disabled = !total;
+    if (!$("painel").hidden) montarRelatorio();
+  }
+
+  $("grupos").addEventListener("click", async function(ev){
+    var b = ev.target.closest("button"); if (!b) return;
+    if (b.dataset.s){
+      if (est.soLeitura) return;
+      var m = indice[Number(b.dataset.i)]; if (!m) return;
+      var it = item(m);
+      if (it.s === b.dataset.s) return;
+      it.s = b.dataset.s;
+      // Voltou a funcionar: o motivo antigo não serve mais.
+      if (it.s === "ok") delete it.obs;
+      atualizar();
+      salvarDia(0);
+    } else if (b.dataset.apagar){ est.apagando = indice[Number(b.dataset.apagar)].id; montar(); }
+    else if (b.dataset.nao){ est.apagando = null; montar(); }
+    else if (b.dataset.sim){
+      var alvo = indice[Number(b.dataset.sim)]; est.apagando = null;
+      if (alvo) try { await store.delMaquina(alvo.id); } catch(e){ falhou(e); }
+    }
+  });
+  $("grupos").addEventListener("input", function(ev){
+    if (!ev.target.classList.contains("obs")) return;
+    var m = indice[Number(ev.target.dataset.i)]; if (!m) return;
+    item(m).obs = ev.target.value;
+    salvarDia(800);
+  });
+  $("editar").addEventListener("click", function(){ est.editando = !est.editando; est.apagando = null; montar(); });
+  $("tipo").addEventListener("change", function(){ $("tipo-novo").hidden = this.value !== OUTRO; if (this.value === OUTRO) $("tipo-novo").focus(); });
+
+  $("form-add").addEventListener("submit", async function(ev){
+    ev.preventDefault();
+    var recado = $("recado-add");
+    if (!store || est.soLeitura) return;
+    var tipo = $("tipo").value === OUTRO ? $("tipo-novo").value.trim() : $("tipo").value;
+    var numero = $("numero").value.trim().toUpperCase();
+    if (!tipo){ recado.textContent = "Escreva o nome do tipo."; $("tipo-novo").focus(); return; }
+    if (!numero){ recado.textContent = "Escreva o número da máquina."; $("numero").focus(); return; }
+    if (est.maquinas.some(function(m){ return numeroDe(m) === numero; })){ recado.textContent = numero + " já está na lista."; return; }
+    // Entra no fim do grupo dela (ou no fim de tudo, se o tipo é novo).
+    var doTipo = est.maquinas.filter(function(m){ return m.tipo === tipo; });
+    var depois = doTipo.length ? doTipo[doTipo.length - 1].ordem || 0 : est.maquinas.reduce(function(mx, m){ return Math.max(mx, m.ordem || 0); }, 0);
+    var seguinte = est.maquinas.filter(function(m){ return (m.ordem || 0) > depois; })[0];
+    var ordem = seguinte ? (depois + seguinte.ordem) / 2 : depois + 10;
+    $("numero").value = "";
+    try {
+      await store.addMaquina({tipo: tipo, numero: numero, ordem: ordem});
+      recado.textContent = numero + " adicionada em " + tipo + ".";
+      if ($("tipo").value === OUTRO){ $("tipo-novo").value = ""; }
+    } catch(e){ $("numero").value = numero; falhou(e); }
+    $("numero").focus();
+  });
+
+  // ---------- Relatório, no formato que ele já manda ----------
+  function saudacao(){ var h = new Date().getHours(); return h < 12 ? "Bom dia!!!" : h < 18 ? "Boa tarde!!!" : "Boa noite!!!"; }
+  function montarRelatorio(){
+    // A segunda linha vem do relatório importado ("Cenário dos equipamentos
+    // móveis Fernandinho."), guardada no banco e não no código: o código é
+    // público, o nome do lugar não precisa ser.
+    var t = [saudacao(), (est.cabecalho || "Cenário dos equipamentos móveis.") + "  " + dataBr(est.data)];
+    var tot = {ok:0, manut:0, parada:0};
+    grupos().forEach(function(g){
+      var ok = 0;
+      // Debaixo de cada tipo, o estado como subtítulo e as máquinas dele
+      // embaixo: primeiro as paradas, depois as em manutenção. As que
+      // funcionam aparecem só na conta do título.
+      var por = {parada:[], manut:[], falta:[]};
+      g.maquinas.forEach(function(m){
+        var it = est.dia.itens[m.id] || {};
+        var e = porChave[it.s];
+        if (!e){ por.falta.push("• " + numeroDe(m)); return; }
+        tot[e.k]++;
+        if (e.k === "ok"){ ok++; return; }
+        var o = (it.obs || "").trim();
+        por[e.k].push("• " + numeroDe(m) + (o ? " - " + o : ""));
+      });
+      // O número do título é quantas estão funcionando, com dois dígitos.
+      t.push("", "*" + String(ok).padStart(2, "0") + " " + g.tipo + "*");
+      if (por.parada.length) t.push(porChave.parada.marca + " " + porChave.parada.texto + ":", ...por.parada);
+      if (por.manut.length) t.push(porChave.manut.marca + " " + porChave.manut.texto + ":", ...por.manut);
+      if (por.falta.length) t.push("❔ Sem conferir:", ...por.falta);
+      if (!por.parada.length && !por.manut.length && !por.falta.length) t.push("Todos funcionando ✅");
+    });
+    $("contas").innerHTML = ESTADOS.map(function(e){ return '<div class="conta ' + e.k + '"><b>' + tot[e.k] + '</b><span>' + e.nome + ' ' + e.marca + '</span></div>'; }).join("");
+    var texto = t.join("\n");
+    $("texto").textContent = texto;
+    $("whatsapp").href = "https://wa.me/?text=" + encodeURIComponent(texto);
+  }
+  $("gerar").addEventListener("click", function(){
+    $("recado").textContent = "";
+    montarRelatorio();
+    $("painel").hidden = false;
+    $("copiar").focus();
+  });
+  function fechar(){ $("painel").hidden = true; $("gerar").focus(); }
+  $("fechar").addEventListener("click", fechar);
+  $("painel").addEventListener("click", function(ev){ if (ev.target === $("painel")) fechar(); });
+  document.addEventListener("keydown", function(ev){ if (ev.key === "Escape" && !$("painel").hidden) fechar(); });
+
+  $("copiar").addEventListener("click", function(){
+    var texto = $("texto").textContent;
+    function selecionar(){
+      var r = document.createRange(); r.selectNodeContents($("texto"));
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      $("recado").textContent = "Texto selecionado: segure o dedo em cima e toque em Copiar.";
+    }
+    try { navigator.clipboard.writeText(texto).then(function(){ $("recado").textContent = "Copiado. Agora é só colar na conversa."; }, selecionar); }
+    catch(e){ selecionar(); }
+  });
+
+  // Quem deixa o app aberto de um dia para o outro passa para o dia novo.
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState === "visible" && store && hoje() !== est.data){ est.data = hoje(); ouvirDia(); atualizar(); }
+  });
+
+  atualizar();
+
+// Não é senha: esta configuração vai dentro de qualquer site com Firebase.
+// Quem protege os dados é a chave do link (abaixo) e as regras do Firestore.
+const firebaseConfig = {
+  apiKey: "AIzaSyB5CdUIw0N_tL-0MbQMm57b6CyafQiLkUU",
+  authDomain: "relatorio-maquinas.firebaseapp.com",
+  projectId: "relatorio-maquinas",
+  storageBucket: "relatorio-maquinas.firebasestorage.app",
+  messagingSenderId: "2203652551",
+  appId: "1:2203652551:web:425ee428f6c892dc2509e2"
+};
+
+const app = initializeApp(firebaseConfig);
+// Cópia no próprio celular: na mina o sinal cai, e a marcação feita sem
+// internet fica guardada e sobe sozinha quando o sinal volta.
+const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+
+// ---------- A chave do link ----------
+// Sem senha, a pedido da dona: os dados moram em frotas/<chave>, e a chave
+// só existe no link que ela manda (depois do #) e nas regras do console.
+// Este repositório é público, então a chave NUNCA entra no código. O que
+// vem depois do # não sai do celular nem para o servidor do site; o app
+// guarda a chave no aparelho para abrir sem ela da próxima vez.
+var CHAVE_LOCAL = "relatorio-maquinas:chave";
+var chave = (location.hash || "").replace(/^#/, "");
+try {
+  if (chave) localStorage.setItem(CHAVE_LOCAL, chave);
+  else chave = localStorage.getItem(CHAVE_LOCAL) || "";
+} catch(e){}
+if (chave && !location.hash) history.replaceState(null, "", "#" + chave);
+var raiz = chave ? "frotas/" + chave : "";
+
+function lista(snap){ return snap.docs.map(function(d){ var o = Object.assign({}, d.data()); o.id = d.id; return o; }); }
+
+const banco = {
+  ouvirMaquinas: function(cb){ return onSnapshot(collection(db, raiz, "maquinas"), function(s){ cb(lista(s)); }, falhouLeitura); },
+  addMaquina: function(m){ return addDoc(collection(db, raiz, "maquinas"), m); },
+  delMaquina: function(id){ return deleteDoc(doc(db, raiz, "maquinas", id)); },
+  ouvirDia: function(data, cb){ return onSnapshot(doc(db, raiz, "dias", data), function(s){ cb(s.exists() ? s.data() : null); }, falhouLeitura); },
+  salvarDia: function(data, corpo){ return setDoc(doc(db, raiz, "dias", data), corpo); },
+  ultimoAntes: function(data){
+    return getDocs(query(collection(db, raiz, "dias"), where("data", "<", data), orderBy("data", "desc"), limit(1)))
+      .then(function(s){ return s.empty ? null : s.docs[0].data(); }, function(){ return null; });
+  },
+  ouvirConfig: function(cb){ return onSnapshot(doc(db, raiz, "config", "geral"), function(s){ cb(s.exists() ? s.data() : {}); }, function(){}); }
+};
+
+// ---------- Abrir ----------
+$("abrindo").hidden = true;
+$("tela-app").hidden = false;
+if (raiz) iniciar(banco);
+else { est.pronto = true; avisar("Abra o app pelo link que a Lorena mandou. Sem ele, o app não sabe onde estão as máquinas."); montar(); }
+</script>
+</body>
+</html>
