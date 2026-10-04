@@ -46,7 +46,24 @@ button:disabled{cursor:default;opacity:.55}
 .menu{background:var(--primary-900);color:var(--neutral-0);padding-inline:16px;padding-block:12px}
 .marca{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:var(--space-3)}
 .marca svg{width:36px;height:36px;flex:none;border-radius:9px;box-shadow:0 0 0 1.5px rgb(255 255 255 / .22)}
-.marca-nome{font-size:15px;line-height:20px;font-weight:600;color:var(--neutral-0)}
+.marca-nome{flex:1;min-width:0;font-size:15px;line-height:20px;font-weight:600;color:var(--neutral-0)}
+
+/* ---------- Botão "Baixar" ----------
+ * Põe o app na tela inicial do celular (ou na área de trabalho do
+ * computador), como o "Criar atalho" do Consulta de Peças. No Android e no
+ * computador o navegador pergunta e instala sozinho; no iPhone a Apple não
+ * deixa o site fazer isso, e o botão mostra o passo a passo. Aberto pelo
+ * próprio atalho, o botão some. */
+.baixar{flex:none;display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;border:0;border-radius:var(--raio-md);background:rgb(255 255 255 / .14);color:var(--neutral-0);font-size:14px;font-weight:600}
+.baixar:hover{background:rgb(255 255 255 / .22)}
+.baixar:focus-visible{outline-color:var(--neutral-0)}
+.baixar svg{width:18px;height:18px}
+.passos{position:fixed;inset:0;z-index:20;background:rgb(15 23 42 / .45);display:flex;align-items:flex-end;justify-content:center;padding-top:env(safe-area-inset-top,0px)}
+.passos-caixa{width:100%;max-width:480px;background:var(--neutral-0);color:var(--neutral-700);border-radius:16px 16px 0 0;padding-inline:20px;padding-block:24px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:var(--space-4)}
+.passos-caixa h2{margin:0;font-size:20px;line-height:28px;font-weight:700;color:var(--neutral-900)}
+.passos-caixa ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:var(--space-3);font-size:16px;line-height:23px}
+.passos-caixa li::marker{font-weight:700;color:var(--primary-950)}
+.passos-caixa strong{color:var(--neutral-900)}
 
 /* ---------- Conteúdo ---------- */
 .conteudo{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:20px 120px;display:flex;flex-direction:column;gap:var(--space-5)}
@@ -159,6 +176,10 @@ input.obs{height:44px;background:var(--neutral-50)}
       <circle cx="32" cy="32" r="8" fill="none" stroke="#fff" stroke-width="5"></circle>
     </svg>
     <p class="marca-nome">Relatório das Máquinas - Amarildo Bragança</p>
+    <button type="button" class="baixar" id="baixar" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Baixar
+    </button>
   </div>
 </header>
 
@@ -190,9 +211,9 @@ input.obs{height:44px;background:var(--neutral-50)}
     </div>
     <form class="cartao form-add" id="form-add" novalidate>
       <select id="tipo" aria-label="Tipo da máquina"></select>
-      <input type="text" id="tipo-novo" placeholder="Nome do tipo, ex.: Caminhões" aria-label="Nome do tipo novo" maxlength="40" hidden>
+      <input type="text" id="tipo-novo" placeholder="Nome do tipo" aria-label="Nome do tipo novo" maxlength="40" hidden>
       <div class="linha">
-        <input type="text" id="numero" placeholder="Número, ex.: CB5164" aria-label="Número da máquina" autocomplete="off" autocapitalize="characters" maxlength="20" enterkeyhint="done">
+        <input type="text" id="numero" placeholder="Número da máquina" aria-label="Número da máquina" autocomplete="off" autocapitalize="characters" maxlength="20" enterkeyhint="done">
         <button type="submit" class="botao botao-secundario">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>
           Adicionar
@@ -206,6 +227,14 @@ input.obs{height:44px;background:var(--neutral-50)}
 
 <div class="rodape-fixo">
   <button type="button" class="botao botao-primario" id="gerar">Gerar relatório</button>
+</div>
+
+<div class="passos" id="passos" hidden>
+  <div class="passos-caixa" role="dialog" aria-modal="true" aria-labelledby="passos-titulo">
+    <h2 id="passos-titulo">Colocar o app na tela inicial</h2>
+    <ol id="passos-lista"></ol>
+    <button type="button" class="botao botao-primario" id="passos-ok">Entendi</button>
+  </div>
 </div>
 
 <div class="painel" id="painel" hidden>
@@ -416,7 +445,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
         } else {
           corpo = '<div class="estados" role="group" aria-label="Estado da ' + num + '">' +
             ESTADOS.map(function(e){ return '<button type="button" class="estado" data-i="' + i + '" data-s="' + e.k + '" aria-pressed="false">' + e.nome + '</button>'; }).join("") +
-            '</div><input type="text" class="obs" id="obs-' + i + '" data-i="' + i + '" placeholder="O que houve? Ex.: aguardando peça" aria-label="O que houve com a ' + num + '" maxlength="160" hidden>';
+            '</div><input type="text" class="obs" id="obs-' + i + '" data-i="' + i + '" placeholder="O que houve?" aria-label="O que houve com a ' + num + '" maxlength="160" hidden>';
         }
         return '<div class="maq"><p class="maq-num"><span class="ponto" id="ponto-' + i + '" aria-hidden="true"></span>' + num + '</p>' + corpo + '</div>';
       }).join("");
@@ -644,6 +673,45 @@ const banco = {
   },
   ouvirConfig: function(cb){ return onSnapshot(doc(db, raiz, "config", "geral"), function(s){ cb(s.exists() ? s.data() : {}); }, function(){}); }
 };
+
+// ---------- Botão "Baixar" ----------
+// O Chrome avisa uma vez só que dá para instalar (beforeinstallprompt);
+// guardado aqui, o toque em "Baixar" abre a pergunta dele na hora.
+var pedidoDeInstalar = null;
+var abertoComoApp = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+var ehIphone = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+window.addEventListener("beforeinstallprompt", function(ev){ ev.preventDefault(); pedidoDeInstalar = ev; });
+window.addEventListener("appinstalled", function(){ $("baixar").hidden = true; pedidoDeInstalar = null; });
+$("baixar").hidden = abertoComoApp;
+function mostrarPassos(){
+  var passos = ehIphone ? [
+    "Toque no botão <strong>Compartilhar</strong> (o quadrado com a seta para cima). No Safari ele fica embaixo da tela.",
+    "Role a lista e toque em <strong>Adicionar à Tela de Início</strong>.",
+    "Toque em <strong>Adicionar</strong>, no canto de cima."
+  ] : [
+    "Toque no menu do navegador <strong>⋮</strong> (os três pontinhos no canto de cima).",
+    "Toque em <strong>Instalar app</strong> ou <strong>Adicionar à tela inicial</strong>.",
+    "Confirme em <strong>Instalar</strong> ou <strong>Adicionar</strong>."
+  ];
+  $("passos-lista").innerHTML = passos.map(function(p){ return "<li>" + p + "</li>"; }).join("");
+  $("passos").hidden = false;
+  $("passos-ok").focus();
+}
+$("baixar").addEventListener("click", async function(){
+  if (pedidoDeInstalar){
+    pedidoDeInstalar.prompt();
+    var r = await pedidoDeInstalar.userChoice;
+    pedidoDeInstalar = null;
+    if (r && r.outcome === "accepted") $("baixar").hidden = true;
+    return;
+  }
+  mostrarPassos();
+});
+$("passos-ok").addEventListener("click", function(){ $("passos").hidden = true; });
+$("passos").addEventListener("click", function(ev){ if (ev.target === $("passos")) $("passos").hidden = true; });
+// O service worker só existe para o navegador aceitar instalar o app; ele
+// não guarda nada (quem guarda os dados no celular é o Firestore).
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});
 
 // ---------- Abrir ----------
 $("abrindo").hidden = true;

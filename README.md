@@ -13,6 +13,9 @@ WhatsApp. Feito para usar no celular.
 - Funciona com sinal fraco: a marcação feita sem internet fica no celular e
   sobe sozinha quando o sinal volta.
 - Cada dia começa igual ao último relatório; só se mexe no que mudou.
+- Botão **Baixar**, no alto: põe o app na tela inicial. No Android e no
+  computador o navegador pergunta e instala; no iPhone a Apple não deixa,
+  e o botão mostra o passo a passo. Aberto pelo atalho, o botão some.
 
 ## Onde está no ar
 
