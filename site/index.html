@@ -120,7 +120,11 @@ button:disabled{cursor:default;opacity:.55}
 input[type="text"],select{width:100%;height:48px;padding:0 14px;font-size:16px;color:var(--neutral-900);background:var(--neutral-0);border:1px solid var(--neutral-200);border-radius:var(--raio-md)}
 input[type="text"]:focus,select:focus{outline:none;border-color:var(--primary-600);box-shadow:0 0 0 3px rgb(15 132 204 / .15)}
 input::placeholder{color:var(--neutral-400)}
-input.obs{height:44px;background:var(--neutral-50)}
+/* Observação: caixa que cresce com o texto. Era um campo de uma linha, e
+ * observação comprida ("Em operação necessita de parada para investigação
+ * de contaminação...") ficava escondida. */
+textarea.obs{display:block;width:100%;min-height:44px;padding:10px 14px;font:inherit;font-size:16px;line-height:22px;color:var(--neutral-900);background:var(--neutral-50);border:1px solid var(--neutral-200);border-radius:var(--raio-md);resize:none;overflow:hidden;overflow-wrap:anywhere}
+textarea.obs:focus{outline:none;border-color:var(--primary-600);box-shadow:0 0 0 3px rgb(15 132 204 / .15)}
 
 .remover{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);font-size:14px;font-weight:600}
 
@@ -459,6 +463,10 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
     return '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONES[k] + '</svg>';
   }
 
+  // A caixa da observação cresce até caber o texto inteiro.
+  function ajustarAltura(el){ el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; }
+  window.addEventListener("resize", function(){ document.querySelectorAll("textarea.obs").forEach(function(el){ if (!el.hidden) ajustarAltura(el); }); });
+
   // ---------- Masculino ou feminino ----------
   // Caminhão (CB) e caminhão-pipa (CP) é "parado"/"liberados"; escavadeira,
   // carregadeira etc. é "parada"/"liberadas". A pedido da dona, só esses
@@ -517,7 +525,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
         } else {
           corpo = '<div class="estados" role="group" aria-label="Estado da ' + num + '">' +
             ESTADOS.map(function(e){ return '<button type="button" class="estado" data-i="' + i + '" data-s="' + e.k + '" aria-pressed="false">' + (e.k === "parada" ? nomeParada(g.tipo) : e.nome) + '</button>'; }).join("") +
-            '</div><input type="text" class="obs" id="obs-' + i + '" data-i="' + i + '" aria-label="O que houve com a ' + num + '" maxlength="160" hidden>';
+            '</div><textarea class="obs" rows="1" id="obs-' + i + '" data-i="' + i + '" aria-label="O que houve com a ' + num + '" maxlength="600" hidden></textarea>';
         }
         return '<div class="maq"><p class="maq-num"><span class="ponto" id="ponto-' + i + '" aria-hidden="true"></span>' + num + '</p>' + corpo + '</div>';
       }).join("");
@@ -557,6 +565,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
         obs.hidden = !porChave[it.s];
         obs.disabled = est.soLeitura;
         if (document.activeElement !== obs) obs.value = it.obs || "";
+        if (!obs.hidden) ajustarAltura(obs);
       }
     });
     grupos().forEach(function(g, gi){
@@ -602,6 +611,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
   });
   $("grupos").addEventListener("input", function(ev){
     if (!ev.target.classList.contains("obs")) return;
+    ajustarAltura(ev.target);
     var m = indice[Number(ev.target.dataset.i)]; if (!m) return;
     item(m).obs = ev.target.value;
     salvarMaquinas([m.id], 800);
@@ -658,7 +668,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
         if (!e){ por.falta.push("• " + numeroDe(m)); return; }
         tot[e.k]++;
         if (e.k === "ok"){ ok++; return; }
-        var o = (it.obs || "").trim();
+        var o = (it.obs || "").trim().replace(/\s*\n\s*/g, " ");
         por[e.k].push("• " + numeroDe(m) + (o ? " - " + o : ""));
       });
       // O número do título é quantas estão liberadas, com dois dígitos.
