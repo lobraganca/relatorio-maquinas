@@ -123,7 +123,6 @@ input.obs{height:44px;background:var(--neutral-50)}
 /* Em manutenção o motivo é obrigatório: campo vazio fica vermelho, com o
  * aviso embaixo, e o relatório não sai enquanto faltar. */
 input.obs.falta{border:1.5px solid var(--danger);background:var(--danger-bg)}
-input.obs.falta::placeholder{color:var(--danger-text)}
 .obs-aviso{margin:0;font-size:13px;font-weight:600;color:var(--danger-text)}
 
 .remover{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);font-size:14px;font-weight:600}
@@ -453,7 +452,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
         } else {
           corpo = '<div class="estados" role="group" aria-label="Estado da ' + num + '">' +
             ESTADOS.map(function(e){ return '<button type="button" class="estado" data-i="' + i + '" data-s="' + e.k + '" aria-pressed="false">' + e.nome + '</button>'; }).join("") +
-            '</div><input type="text" class="obs" id="obs-' + i + '" data-i="' + i + '" placeholder="O que houve?" aria-label="O que houve com a ' + num + '" maxlength="160" hidden><p class="obs-aviso" id="obs-aviso-' + i + '" hidden>Obrigatório: escreva o que está sendo feito na manutenção.</p>';
+            '</div><input type="text" class="obs" id="obs-' + i + '" data-i="' + i + '" aria-label="O que houve com a ' + num + '" maxlength="160" hidden><p class="obs-aviso" id="obs-aviso-' + i + '" hidden>Obrigatório</p>';
         }
         return '<div class="maq"><p class="maq-num"><span class="ponto" id="ponto-' + i + '" aria-hidden="true"></span>' + num + '</p>' + corpo + '</div>';
       }).join("");
@@ -494,7 +493,6 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
         var falta = faltaMotivo(it);
         obs.classList.toggle("falta", falta);
         obs.required = it.s === "manut";
-        obs.placeholder = it.s === "manut" ? "O que está sendo feito?" : "O que houve?";
         $("obs-aviso-" + i).hidden = !falta;
       }
     });
