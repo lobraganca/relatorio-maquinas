@@ -633,8 +633,10 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
       var it = item(m);
       if (it.s === b.dataset.s) return;
       it.s = b.dataset.s;
-      // Voltou a funcionar: o motivo antigo não serve mais.
-      if (it.s === "ok") delete it.obs;
+      // A observação vale até o status mudar (a pedido da dona): passa de um
+      // dia para o outro junto com a marcação, e qualquer troca de status a
+      // apaga — o motivo de "Parado" não serve para "Manutenção".
+      delete it.obs;
       atualizar();
       salvarMaquinas([m.id], 0);
     } else if (b.dataset.apagar){ est.apagando = indice[Number(b.dataset.apagar)].id; montar(); }
