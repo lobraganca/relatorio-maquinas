@@ -274,7 +274,6 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
     {k:"parada", nome:"Parada",      texto:"Parada",        marca:"❌"}
   ];
   var porChave = {}; ESTADOS.forEach(function(e){ porChave[e.k] = e; });
-  function temMotivo(s){ return s === "manut" || s === "parada"; }
 
   var $ = function(id){ return document.getElementById(id); };
   function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
@@ -488,7 +487,9 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
       if (ponto) ponto.className = "ponto" + (porChave[it.s] ? " " + it.s : "");
       var obs = $("obs-" + i);
       if (obs){
-        obs.hidden = !temMotivo(it.s);
+        // Liberado também tem observação (a pedido da dona); só a máquina
+        // ainda sem marcar fica sem o campo.
+        obs.hidden = !porChave[it.s];
         obs.disabled = est.soLeitura;
         if (document.activeElement !== obs) obs.value = it.obs || "";
       }
