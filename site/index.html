@@ -459,6 +459,16 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
     return '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONES[k] + '</svg>';
   }
 
+  // ---------- Masculino ou feminino ----------
+  // Caminhão (CB) e caminhão-pipa (CP) é "parado"/"liberados"; escavadeira,
+  // carregadeira etc. é "parada"/"liberadas". A pedido da dona, só esses
+  // dois tipos mudam por enquanto.
+  function ehMasculino(tipo){
+    var t = String(tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return t.indexOf("caminh") === 0 || t.indexOf("pipa") === 0;
+  }
+  function nomeParada(tipo){ return ehMasculino(tipo) ? "Parado" : "Parada"; }
+
   // ---------- Grupos por tipo, na ordem em que foram cadastrados ----------
   function grupos(){
     var porTipo = {}, ordem = [];
@@ -506,7 +516,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
             : '<button type="button" class="botao botao-perigo botao-pequeno" data-apagar="' + i + '">Remover</button>';
         } else {
           corpo = '<div class="estados" role="group" aria-label="Estado da ' + num + '">' +
-            ESTADOS.map(function(e){ return '<button type="button" class="estado" data-i="' + i + '" data-s="' + e.k + '" aria-pressed="false">' + e.nome + '</button>'; }).join("") +
+            ESTADOS.map(function(e){ return '<button type="button" class="estado" data-i="' + i + '" data-s="' + e.k + '" aria-pressed="false">' + (e.k === "parada" ? nomeParada(g.tipo) : e.nome) + '</button>'; }).join("") +
             '</div><input type="text" class="obs" id="obs-' + i + '" data-i="' + i + '" aria-label="O que houve com a ' + num + '" maxlength="160" hidden>';
         }
         return '<div class="maq"><p class="maq-num"><span class="ponto" id="ponto-' + i + '" aria-hidden="true"></span>' + num + '</p>' + corpo + '</div>';
@@ -553,9 +563,10 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
       var el = $("resumo-" + gi); if (!el) return;
       var c = {ok:0, manut:0, parada:0, falta:0};
       g.maquinas.forEach(function(m){ var s = (est.dia.itens[m.id] || {}).s; c[porChave[s] ? s : "falta"]++; });
-      var p = ['<span class="pilula ok">' + c.ok + ' de ' + g.maquinas.length + ' liberadas</span>'];
+      var mas = ehMasculino(g.tipo);
+      var p = ['<span class="pilula ok">' + c.ok + ' de ' + g.maquinas.length + (mas ? ' liberados' : ' liberadas') + '</span>'];
       p.push('<span class="pilula manut">' + c.manut + ' em manutenção</span>');
-      p.push('<span class="pilula parada">' + c.parada + (c.parada === 1 ? ' parada' : ' paradas') + '</span>');
+      p.push('<span class="pilula parada">' + c.parada + (mas ? (c.parada === 1 ? ' parado' : ' parados') : (c.parada === 1 ? ' parada' : ' paradas')) + '</span>');
       if (c.falta) p.push('<span class="pilula falta">' + c.falta + ' sem marcar</span>');
       el.innerHTML = p.join("");
     });
@@ -652,10 +663,10 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
       });
       // O número do título é quantas estão liberadas, com dois dígitos.
       t.push("", "*" + String(ok).padStart(2, "0") + " " + g.tipo + "*");
-      if (por.parada.length) t.push(porChave.parada.marca + " " + porChave.parada.texto + ":", ...por.parada);
+      if (por.parada.length) t.push(porChave.parada.marca + " " + nomeParada(g.tipo) + ":", ...por.parada);
       if (por.manut.length) t.push(porChave.manut.marca + " " + porChave.manut.texto + ":", ...por.manut);
       if (por.falta.length) t.push("❔ Sem conferir:", ...por.falta);
-      if (!por.parada.length && !por.manut.length && !por.falta.length) t.push("Todas liberadas ✅");
+      if (!por.parada.length && !por.manut.length && !por.falta.length) t.push(ehMasculino(g.tipo) ? "Todos liberados ✅" : "Todas liberadas ✅");
     });
     return {texto: t.join("\n"), tot: tot};
   }
