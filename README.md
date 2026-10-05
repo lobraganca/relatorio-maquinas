@@ -1,6 +1,6 @@
 # Relatório das Máquinas - Amarildo Bragança
 
-Site para marcar, todo dia, o estado de cada máquina (Funcionando,
+Site para marcar, todo dia, o estado de cada máquina (Liberado,
 Manutenção ou Parada) e gerar o relatório no formato que vai para o
 WhatsApp. Feito para usar no celular.
 

@@ -269,7 +269,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
   var OUTRO = "__outro__";
   // Os três estados. A marca é o que aparece ao lado do número no relatório.
   var ESTADOS = [
-    {k:"ok",     nome:"Funcionando", texto:"Funcionando",   marca:"✅"},
+    {k:"ok",     nome:"Liberado",    texto:"Liberado",      marca:"✅"},
     {k:"manut",  nome:"Manutenção",  texto:"Em manutenção", marca:"🔧"},
     {k:"parada", nome:"Parada",      texto:"Parada",        marca:"❌"}
   ];
@@ -489,7 +489,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
       var el = $("resumo-" + gi); if (!el) return;
       var c = {ok:0, manut:0, parada:0, falta:0};
       g.maquinas.forEach(function(m){ var s = (est.dia.itens[m.id] || {}).s; c[porChave[s] ? s : "falta"]++; });
-      var p = ['<span class="pilula ok">' + c.ok + ' de ' + g.maquinas.length + ' funcionando</span>'];
+      var p = ['<span class="pilula ok">' + c.ok + ' de ' + g.maquinas.length + ' liberadas</span>'];
       p.push('<span class="pilula manut">' + c.manut + ' em manutenção</span>');
       p.push('<span class="pilula parada">' + c.parada + (c.parada === 1 ? ' parada' : ' paradas') + '</span>');
       if (c.falta) p.push('<span class="pilula falta">' + c.falta + ' sem marcar</span>');
@@ -579,12 +579,12 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
         var o = (it.obs || "").trim();
         por[e.k].push("• " + numeroDe(m) + (o ? " - " + o : ""));
       });
-      // O número do título é quantas estão funcionando, com dois dígitos.
+      // O número do título é quantas estão liberadas, com dois dígitos.
       t.push("", "*" + String(ok).padStart(2, "0") + " " + g.tipo + "*");
       if (por.parada.length) t.push(porChave.parada.marca + " " + porChave.parada.texto + ":", ...por.parada);
       if (por.manut.length) t.push(porChave.manut.marca + " " + porChave.manut.texto + ":", ...por.manut);
       if (por.falta.length) t.push("❔ Sem conferir:", ...por.falta);
-      if (!por.parada.length && !por.manut.length && !por.falta.length) t.push("Todos funcionando ✅");
+      if (!por.parada.length && !por.manut.length && !por.falta.length) t.push("Todas liberadas ✅");
     });
     $("contas").innerHTML = ESTADOS.map(function(e){ return '<div class="conta ' + e.k + '"><b>' + tot[e.k] + '</b><span>' + e.nome + ' ' + e.marca + '</span></div>'; }).join("");
     var texto = t.join("\n");
