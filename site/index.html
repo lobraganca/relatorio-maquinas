@@ -151,7 +151,9 @@ textarea.obs:focus{outline:none;border-color:var(--primary-600);box-shadow:0 0 0
 
 /* ---------- Botão do relatório, fixo embaixo ---------- */
 .rodape-fixo{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--neutral-0);border-top:1px solid var(--neutral-200);padding-inline:16px;padding-block:12px calc(12px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 16px rgb(15 23 42 / .06)}
-.rodape-fixo .botao{width:100%;max-width:688px;margin:0 auto;display:flex;height:54px;font-size:16px}
+.rodape-botoes{max-width:688px;margin:0 auto;display:grid;grid-template-columns:2fr 3fr;gap:var(--space-2)}
+.rodape-fixo .botao{width:100%;display:flex;height:54px;font-size:16px}
+.botao-salvo{background:var(--success-bg);border-color:var(--success-border);color:var(--success-text)}
 
 /* ---------- Relatório ---------- */
 .painel{position:fixed;inset:0;z-index:10;background:rgb(15 23 42 / .45);display:flex;align-items:flex-end;justify-content:center;padding-top:env(safe-area-inset-top,0px)}
@@ -232,7 +234,10 @@ textarea.obs:focus{outline:none;border-color:var(--primary-600);box-shadow:0 0 0
 </main>
 
 <div class="rodape-fixo">
-  <button type="button" class="botao botao-primario" id="gerar">Gerar relatório</button>
+  <div class="rodape-botoes">
+    <button type="button" class="botao botao-secundario" id="salvar">Salvar</button>
+    <button type="button" class="botao botao-primario" id="gerar">Gerar relatório</button>
+  </div>
 </div>
 
 <div class="passos" id="passos" hidden>
@@ -358,6 +363,36 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
     el.textContent = t;
     el.hidden = !t;
   }
+  // ---------- Botão "Salvar" ----------
+  // Tudo já vai sozinho para o banco a cada toque; o botão grava de novo o
+  // dia inteiro como está na tela, com o relatório, e mostra que gravou —
+  // é a confirmação que ele pediu para o fim do dia.
+  var voltarBotao = null;
+  function rotuloSalvar(texto, salvo){
+    var b = $("salvar"); b.textContent = texto;
+    b.classList.toggle("botao-salvo", !!salvo);
+    clearTimeout(voltarBotao);
+    if (salvo) voltarBotao = setTimeout(function(){ rotuloSalvar("Salvar", false); }, 2500);
+  }
+  $("salvar").addEventListener("click", async function(){
+    if (est.soLeitura || !est.maquinas.length) return;
+    var ids = est.maquinas.map(function(m){ return m.id; }).filter(function(id){ return est.dia.itens[id]; });
+    ids.forEach(function(id){ mudadas[id] = true; });
+    clearTimeout(espera);
+    if (navigator.onLine === false){
+      // Sem sinal o banco só confirma quando o sinal voltar; a marcação já
+      // está guardada no celular.
+      esvaziar(); rotuloSalvar("Guardado no celular", true); mostrarSalvo();
+      return;
+    }
+    rotuloSalvar("Salvando…", false);
+    esvaziar();
+    // Se já havia uma gravação andando, ela leva estas junto: espera acabar.
+    var limite = Date.now() + 20000;
+    while ((gravando || Object.keys(mudadas).length) && Date.now() < limite) await new Promise(function(r){ setTimeout(r, 200); });
+    if (!gravando && !Object.keys(mudadas).length) rotuloSalvar("Salvo ✓", true);
+    else { rotuloSalvar("Salvar", false); mostrarSalvo(); }
+  });
   window.addEventListener("online", mostrarSalvo);
   window.addEventListener("offline", mostrarSalvo);
 
