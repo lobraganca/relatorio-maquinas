@@ -20,6 +20,13 @@ Avena) nem com o `catalogo-de-pecas`. A dona pede os apps separados.
   celular).
 - **Não pôr a lista da frota no código.** Número de máquina e defeito são
   dados do serviço do pai da dona; moram só no banco.
+- **Gravação por máquina, nunca o dia inteiro.** Cada toque grava só
+  `itens.<id>` (setDoc com mergeFields) e o texto `relatorio` do dia. Em
+  05/10 a versão que regravava o dia inteiro gravou um dia com 14 das 48
+  máquinas, porque o celular ainda não tinha trazido o dia anterior.
+- Toda máquina sem marcação hoje herda a do último dia (`ultimoAntes`, lido
+  do SERVIDOR — a cópia do celular sem sinal responde "vazio" sem errar) e
+  isso é gravado, mas só depois de o banco confirmar o dia de hoje.
 - O relatório: o número no título de cada tipo é quantas estão FUNCIONANDO
   (dois dígitos), e debaixo vêm só as paradas e as em manutenção.
 

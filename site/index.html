@@ -69,6 +69,7 @@ button:disabled{cursor:default;opacity:.55}
 .conteudo{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:20px 120px;display:flex;flex-direction:column;gap:var(--space-5)}
 .cabecalho h1{margin:0;font-size:22px;line-height:30px;font-weight:700;color:var(--neutral-900);letter-spacing:-.01em}
 .cabecalho h1::first-letter{text-transform:uppercase}
+.cabecalho .salvo{font-size:13px;font-weight:600;color:var(--success-text)}
 .cabecalho p{font-size:15px;color:var(--neutral-600)}
 
 .secao-topo{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-2)}
@@ -190,6 +191,7 @@ input.obs{height:44px;background:var(--neutral-50)}
 <main class="conteudo">
   <div class="cabecalho">
     <h1 id="hoje">Hoje</h1>
+    <p class="salvo" id="salvo" hidden></p>
     <p id="instrucao">Toque no estado de cada máquina.</p>
   </div>
 
@@ -260,7 +262,7 @@ input.obs{height:44px;background:var(--neutral-50)}
 // Versão fixa do SDK: trocar de versão é uma decisão, não um acidente.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot,
-  addDoc, deleteDoc, setDoc, getDocs, query, where, orderBy, limit }
+  addDoc, deleteDoc, setDoc, getDocs, getDocsFromServer, query, where, orderBy, limit }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 
@@ -304,54 +306,106 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
     }
   }
 
-  // ---------- Gravação do dia: uma por vez, sempre a mais nova ----------
-  var pendente = null, gravando = false, espera = null;
-  function salvarDia(atraso){
-    if (est.soLeitura) return;
-    est.dia.data = est.data;
-    pendente = {data: est.data, corpo: clonar(est.dia)};
+  // ---------- Gravação do dia ----------
+  // Grava só as máquinas que mudaram, e junto o texto do relatório: um toque
+  // nunca apaga as outras. Antes o dia inteiro era regravado com o que
+  // estava na tela, e em 05/10 um celular que ainda não tinha trazido o dia
+  // anterior gravou um dia com 14 das 48 máquinas — as outras 34 iam sair
+  // como "sem conferir" no fim do dia.
+  var mudadas = {}, gravando = false, espera = null, ultimaGravacao = null;
+  function salvarMaquinas(ids, atraso){
+    if (est.soLeitura || !ids.length) return;
+    ids.forEach(function(id){ mudadas[id] = true; });
+    mostrarSalvo();
     clearTimeout(espera);
     if (atraso) espera = setTimeout(esvaziar, atraso); else esvaziar();
   }
+  function temPendente(){ return gravando || Object.keys(mudadas).length > 0; }
   async function esvaziar(){
     if (gravando) return;
     gravando = true;
-    while (pendente){
-      var p = pendente; pendente = null;
-      try { await store.salvarDia(p.data, p.corpo); }
+    while (Object.keys(mudadas).length){
+      var ids = Object.keys(mudadas); mudadas = {};
+      var data = est.data, itens = {};
+      ids.forEach(function(id){ if (est.dia.itens[id]) itens[id] = clonar(est.dia.itens[id]); });
+      var rel = textoRelatorio().texto;
+      try { await store.salvarItens(data, itens, rel); }
       catch(e){
         if (e && e.code === "unavailable"){
-          await new Promise(function(r){ setTimeout(r, 1000); });
-          try { await store.salvarDia(p.data, p.corpo); } catch(e2){ gravando = false; falhou(e2); return; }
-        } else { gravando = false; falhou(e); return; }
+          await new Promise(function(r){ setTimeout(r, 1500); });
+          try { await store.salvarItens(data, itens, rel); }
+          catch(e2){ ids.forEach(function(id){ mudadas[id] = true; }); gravando = false; falhou(e2); mostrarSalvo(); return; }
+        } else { ids.forEach(function(id){ mudadas[id] = true; }); gravando = false; falhou(e); mostrarSalvo(); return; }
       }
     }
     gravando = false;
+    ultimaGravacao = new Date();
+    mostrarSalvo();
     if (!$("aviso").hidden && !est.soLeitura) avisar("");
   }
+  // "Salvo às 14:32" embaixo da data: ele vê que está guardado.
+  function hora(d){ return d.toLocaleTimeString("pt-BR", {hour: "2-digit", minute: "2-digit"}); }
+  function mostrarSalvo(){
+    var el = $("salvo"); if (!el) return;
+    var t = "";
+    if (temPendente()) t = navigator.onLine === false ? "Sem internet: está guardado no celular e vai para o banco quando o sinal voltar." : "Salvando…";
+    else if (ultimaGravacao) t = "Salvo às " + hora(ultimaGravacao);
+    else if (est.dia.atualizadoEm) t = "Salvo às " + hora(new Date(est.dia.atualizadoEm));
+    el.textContent = t;
+    el.hidden = !t;
+  }
+  window.addEventListener("online", mostrarSalvo);
+  window.addEventListener("offline", mostrarSalvo);
 
-  // O dia novo começa igual ao último relatório: máquina parada esperando
-  // peça continua parada amanhã, e ele só mexe no que mudou.
-  var pararDia = null;
+  // ---------- O dia: o que foi marcado hoje + o último dia antes dele ----------
+  // Toda máquina sem marcação hoje fica com o estado do último dia (máquina
+  // parada esperando peça continua parada amanhã), e isso é gravado: assim
+  // o dia no banco tem sempre todas as máquinas, mesmo que ele mexa em
+  // poucas, e no fim do dia o relatório está inteiro.
+  var pararDia = null, anterior = null;
   function ouvirDia(){
     if (pararDia) pararDia();
     var data = est.data;
-    est.dia = {itens:{}}; est.herdadoDe = null;
-    pararDia = store.ouvirDia(data, function(corpo){
-      if (data !== est.data || pendente || gravando) return;
-      if (corpo){
-        est.dia = clonar(corpo);
+    est.dia = {itens:{}}; est.herdadoDe = null; est.diaConfirmado = false; anterior = null;
+    carregarAnterior(data);
+    pararDia = store.ouvirDia(data, function(corpo, doCache){
+      if (data !== est.data) return;
+      // Com marcação ainda subindo, a tela é a verdade; o banco alcança.
+      if (!temPendente()){
+        est.dia = corpo ? clonar(corpo) : {itens:{}};
         if (!est.dia.itens) est.dia.itens = {};
-        atualizar();
-        return;
       }
-      store.ultimoAntes(data).then(function(ant){
-        if (data !== est.data || pendente || gravando || est.dia.data) return;
-        est.dia = {itens: ant && ant.itens ? clonar(ant.itens) : {}};
-        est.herdadoDe = ant ? ant.data : null;
-        atualizar();
-      });
+      if (!doCache) est.diaConfirmado = true;
+      completarDia();
+      atualizar();
     });
+  }
+  function carregarAnterior(data){
+    store.ultimoAntes(data).then(function(ant){
+      if (data !== est.data) return;
+      anterior = ant || {itens:{}};
+      completarDia();
+      atualizar();
+    }, function(e){
+      // Antes, erro aqui virava "não há dia anterior" em silêncio. Agora tenta de novo.
+      console.warn("o dia anterior não carregou", e);
+      setTimeout(function(){ if (data === est.data && !anterior) carregarAnterior(data); }, 5000);
+    });
+  }
+  function completarDia(){
+    if (!anterior || !est.pronto) return;
+    var herdadas = [];
+    est.maquinas.forEach(function(m){
+      if (!est.dia.itens[m.id] && anterior.itens && anterior.itens[m.id]){
+        est.dia.itens[m.id] = clonar(anterior.itens[m.id]);
+        herdadas.push(m.id);
+      }
+    });
+    if (!herdadas.length) return;
+    if (anterior.data) est.herdadoDe = anterior.data;
+    // Só grava depois de o banco dizer o que já tem hoje: uma cópia velha do
+    // celular não pode passar a de ontem por cima do que foi marcado hoje.
+    if (est.diaConfirmado) salvarMaquinas(herdadas, 0);
   }
 
   function iniciar(s){
@@ -359,6 +413,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
     s.ouvirMaquinas(function(lista){
       lista.sort(function(a,b){ return (a.ordem||0) - (b.ordem||0); });
       est.maquinas = lista; est.pronto = true;
+      completarDia();
       montar();
     });
     s.ouvirConfig(function(c){ est.cabecalho = (c && c.cabecalho) || ""; if (!$("painel").hidden) montarRelatorio(); });
@@ -507,6 +562,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
     var total = est.maquinas.length;
     var her = $("herdado");
     her.hidden = !est.herdadoDe;
+    mostrarSalvo();
     if (est.herdadoDe) her.textContent = "Começou igual ao relatório de " + dataBr(est.herdadoDe) + ". Mude só o que mudou hoje.";
     $("instrucao").textContent = total && feitas < total ? "Faltam " + (total - feitas) + " de " + total + " máquinas. Toque no estado de cada uma." : "Toque no estado de cada máquina.";
     $("hoje").textContent = deIso(est.data).toLocaleDateString("pt-BR", {weekday:"long", day:"numeric", month:"long"});
@@ -525,7 +581,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
       // Voltou a funcionar: o motivo antigo não serve mais.
       if (it.s === "ok") delete it.obs;
       atualizar();
-      salvarDia(0);
+      salvarMaquinas([m.id], 0);
     } else if (b.dataset.apagar){ est.apagando = indice[Number(b.dataset.apagar)].id; montar(); }
     else if (b.dataset.nao){ est.apagando = null; montar(); }
     else if (b.dataset.sim){
@@ -537,7 +593,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
     if (!ev.target.classList.contains("obs")) return;
     var m = indice[Number(ev.target.dataset.i)]; if (!m) return;
     item(m).obs = ev.target.value;
-    salvarDia(800);
+    salvarMaquinas([m.id], 800);
   });
   $("editar").addEventListener("click", function(){ est.editando = !est.editando; est.apagando = null; montar(); });
   $("tipo").addEventListener("change", function(){ $("tipo-novo").hidden = this.value !== OUTRO; if (this.value === OUTRO) $("tipo-novo").focus(); });
@@ -568,6 +624,12 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
   // ---------- Relatório, no formato que ele já manda ----------
   function saudacao(){ var h = new Date().getHours(); return h < 12 ? "Bom dia!!!" : h < 18 ? "Boa tarde!!!" : "Boa noite!!!"; }
   function montarRelatorio(){
+    var r = textoRelatorio();
+    $("contas").innerHTML = ESTADOS.map(function(e){ return '<div class="conta ' + e.k + '"><b>' + r.tot[e.k] + '</b><span>' + e.nome + ' ' + e.marca + '</span></div>'; }).join("");
+    $("texto").textContent = r.texto;
+    $("whatsapp").href = "https://wa.me/?text=" + encodeURIComponent(r.texto);
+  }
+  function textoRelatorio(){
     // A segunda linha vem do relatório importado ("Cenário dos equipamentos
     // móveis Fernandinho."), guardada no banco e não no código: o código é
     // público, o nome do lugar não precisa ser.
@@ -595,10 +657,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
       if (por.falta.length) t.push("❔ Sem conferir:", ...por.falta);
       if (!por.parada.length && !por.manut.length && !por.falta.length) t.push("Todas liberadas ✅");
     });
-    $("contas").innerHTML = ESTADOS.map(function(e){ return '<div class="conta ' + e.k + '"><b>' + tot[e.k] + '</b><span>' + e.nome + ' ' + e.marca + '</span></div>'; }).join("");
-    var texto = t.join("\n");
-    $("texto").textContent = texto;
-    $("whatsapp").href = "https://wa.me/?text=" + encodeURIComponent(texto);
+    return {texto: t.join("\n"), tot: tot};
   }
   $("gerar").addEventListener("click", function(){
     $("recado").textContent = "";
@@ -674,11 +733,22 @@ const banco = {
   ouvirMaquinas: function(cb){ return onSnapshot(collection(db, raiz, "maquinas"), function(s){ if (s.empty && s.metadata.fromCache) return; cb(lista(s)); }, falhouLeitura); },
   addMaquina: function(m){ return addDoc(collection(db, raiz, "maquinas"), m); },
   delMaquina: function(id){ return deleteDoc(doc(db, raiz, "maquinas", id)); },
-  ouvirDia: function(data, cb){ return onSnapshot(doc(db, raiz, "dias", data), function(s){ cb(s.exists() ? s.data() : null); }, falhouLeitura); },
-  salvarDia: function(data, corpo){ return setDoc(doc(db, raiz, "dias", data), corpo); },
+  // includeMetadataChanges: avisa também quando a cópia do celular é
+  // confirmada pelo banco (doCache passa a falso), mesmo sem mudar nada.
+  ouvirDia: function(data, cb){ return onSnapshot(doc(db, raiz, "dias", data), {includeMetadataChanges: true}, function(s){ cb(s.exists() ? s.data() : null, s.metadata.fromCache); }, falhouLeitura); },
+  // Só os campos das máquinas que mudaram (mergeFields): as outras ficam
+  // como estão no banco. Junto vai o texto do relatório, para o dia ficar
+  // gravado inteiro, com o relatório pronto, a cada mudança.
+  salvarItens: function(data, itens, relatorio){
+    var campos = ["data", "atualizadoEm", "relatorio"].concat(Object.keys(itens).map(function(id){ return "itens." + id; }));
+    return setDoc(doc(db, raiz, "dias", data), {data: data, atualizadoEm: new Date().toISOString(), relatorio: relatorio, itens: itens}, {mergeFields: campos});
+  },
+  // Do banco, e não da cópia do celular: sem sinal, a cópia pode estar vazia
+  // e dizer "não há dia anterior" sem errar — e o dia sairia sem herdar nada.
+  // Sem sinal, isto falha; quem chama tenta de novo até o sinal voltar.
   ultimoAntes: function(data){
-    return getDocs(query(collection(db, raiz, "dias"), where("data", "<", data), orderBy("data", "desc"), limit(1)))
-      .then(function(s){ return s.empty ? null : s.docs[0].data(); }, function(){ return null; });
+    return getDocsFromServer(query(collection(db, raiz, "dias"), where("data", "<", data), orderBy("data", "desc"), limit(1)))
+      .then(function(s){ return s.empty ? null : s.docs[0].data(); });
   },
   ouvirConfig: function(cb){ return onSnapshot(doc(db, raiz, "config", "geral"), function(s){ cb(s.exists() ? s.data() : {}); }, function(){}); }
 };
