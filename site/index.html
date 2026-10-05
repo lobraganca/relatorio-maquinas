@@ -413,7 +413,15 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
       if (!porTipo[t]){ porTipo[t] = []; ordem.push(t); }
       porTipo[t].push(m);
     });
-    return ordem.map(function(t){ return {tipo: t, maquinas: porTipo[t]}; });
+    // Dentro de cada tipo, em ordem alfabética pelo número (a pedido da
+    // dona). "numeric" compara os números como números: TE209 vem antes de
+    // TE8501. Os tipos continuam na ordem em que foram cadastrados.
+    return ordem.map(function(t){
+      var lista = porTipo[t].slice().sort(function(a, b){
+        return numeroDe(a).localeCompare(numeroDe(b), "pt-BR", {numeric: true, sensitivity: "base"});
+      });
+      return {tipo: t, maquinas: lista};
+    });
   }
 
   // ---------- Tela ----------
