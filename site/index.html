@@ -120,10 +120,6 @@ input[type="text"],select{width:100%;height:48px;padding:0 14px;font-size:16px;c
 input[type="text"]:focus,select:focus{outline:none;border-color:var(--primary-600);box-shadow:0 0 0 3px rgb(15 132 204 / .15)}
 input::placeholder{color:var(--neutral-400)}
 input.obs{height:44px;background:var(--neutral-50)}
-/* Em manutenção o motivo é obrigatório: campo vazio fica vermelho, com o
- * aviso embaixo, e o relatório não sai enquanto faltar. */
-input.obs.falta{border:1.5px solid var(--danger);background:var(--danger-bg)}
-.obs-aviso{margin:0;font-size:13px;font-weight:600;color:var(--danger-text)}
 
 .remover{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);font-size:14px;font-weight:600}
 
@@ -279,9 +275,6 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
   ];
   var porChave = {}; ESTADOS.forEach(function(e){ porChave[e.k] = e; });
   function temMotivo(s){ return s === "manut" || s === "parada"; }
-  // A pedido da dona: máquina em manutenção sem dizer o que está sendo feito
-  // não entra no relatório. (Parada continua com o motivo opcional.)
-  function faltaMotivo(it){ return it && it.s === "manut" && !(it.obs || "").trim(); }
 
   var $ = function(id){ return document.getElementById(id); };
   function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
@@ -452,7 +445,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
         } else {
           corpo = '<div class="estados" role="group" aria-label="Estado da ' + num + '">' +
             ESTADOS.map(function(e){ return '<button type="button" class="estado" data-i="' + i + '" data-s="' + e.k + '" aria-pressed="false">' + e.nome + '</button>'; }).join("") +
-            '</div><input type="text" class="obs" id="obs-' + i + '" data-i="' + i + '" aria-label="O que houve com a ' + num + '" maxlength="160" hidden><p class="obs-aviso" id="obs-aviso-' + i + '" hidden>Obrigatório</p>';
+            '</div><input type="text" class="obs" id="obs-' + i + '" data-i="' + i + '" aria-label="O que houve com a ' + num + '" maxlength="160" hidden>';
         }
         return '<div class="maq"><p class="maq-num"><span class="ponto" id="ponto-' + i + '" aria-hidden="true"></span>' + num + '</p>' + corpo + '</div>';
       }).join("");
@@ -490,10 +483,6 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
         obs.hidden = !temMotivo(it.s);
         obs.disabled = est.soLeitura;
         if (document.activeElement !== obs) obs.value = it.obs || "";
-        var falta = faltaMotivo(it);
-        obs.classList.toggle("falta", falta);
-        obs.required = it.s === "manut";
-        $("obs-aviso-" + i).hidden = !falta;
       }
     });
     grupos().forEach(function(g, gi){
@@ -526,10 +515,8 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
       it.s = b.dataset.s;
       // Voltou a funcionar: o motivo antigo não serve mais.
       if (it.s === "ok") delete it.obs;
-      var abrirCampo = faltaMotivo(it);
       atualizar();
       salvarDia(0);
-      if (abrirCampo){ var campo = $("obs-" + b.dataset.i); if (campo) campo.focus(); }
     } else if (b.dataset.apagar){ est.apagando = indice[Number(b.dataset.apagar)].id; montar(); }
     else if (b.dataset.nao){ est.apagando = null; montar(); }
     else if (b.dataset.sim){
@@ -539,9 +526,6 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
   });
   $("grupos").addEventListener("input", function(ev){
     if (!ev.target.classList.contains("obs")) return;
-    var semTexto = !ev.target.value.trim() && ev.target.required;
-    ev.target.classList.toggle("falta", semTexto);
-    var av = $("obs-aviso-" + ev.target.dataset.i); if (av) av.hidden = !semTexto;
     var m = indice[Number(ev.target.dataset.i)]; if (!m) return;
     item(m).obs = ev.target.value;
     salvarDia(800);
@@ -608,18 +592,6 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
     $("whatsapp").href = "https://wa.me/?text=" + encodeURIComponent(texto);
   }
   $("gerar").addEventListener("click", function(){
-    var faltam = indice.map(function(m, i){ return {m: m, i: i}; })
-      .filter(function(x){ return faltaMotivo(est.dia.itens[x.m.id]); });
-    if (faltam.length){
-      var nomes = faltam.map(function(x){ return numeroDe(x.m); });
-      avisar((nomes.length === 1 ? "Falta dizer o que está sendo feito na " + nomes[0]
-        : "Falta dizer o que está sendo feito nas máquinas em manutenção: " + nomes.join(", ")) + ". Escreva no campo vermelho e gere de novo.");
-      atualizar();
-      var campo = $("obs-" + faltam[0].i);
-      if (campo){ campo.scrollIntoView({block: "center"}); campo.focus({preventScroll: true}); }
-      return;
-    }
-    if (/^Falta dizer/.test($("aviso").textContent)) avisar("");
     $("recado").textContent = "";
     montarRelatorio();
     $("painel").hidden = false;
