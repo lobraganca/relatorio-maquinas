@@ -468,12 +468,12 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
   window.addEventListener("resize", function(){ document.querySelectorAll("textarea.obs").forEach(function(el){ if (!el.hidden) ajustarAltura(el); }); });
 
   // ---------- Masculino ou feminino ----------
-  // Caminhão (CB) e caminhão-pipa (CP) é "parado"/"liberados"; escavadeira,
-  // carregadeira etc. é "parada"/"liberadas". A pedido da dona, só esses
-  // dois tipos mudam por enquanto.
+  // Caminhão (CB), caminhão-pipa (CP), comboio (CL) e trator de esteira (TE)
+  // é "parado"/"liberados"; escavadeira, carregadeira etc. é
+  // "parada"/"liberadas". Os tipos masculinos foram escolhidos pela dona.
   function ehMasculino(tipo){
     var t = String(tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return t.indexOf("caminh") === 0 || t.indexOf("pipa") === 0;
+    return t.indexOf("caminh") === 0 || t.indexOf("pipa") === 0 || t.indexOf("comboio") === 0 || t.indexOf("trator") === 0;
   }
   function nomeParada(tipo){ return ehMasculino(tipo) ? "Parado" : "Parada"; }
 
