@@ -27,8 +27,11 @@ Avena) nem com o `catalogo-de-pecas`. A dona pede os apps separados.
 - Toda máquina sem marcação hoje herda a do último dia (`ultimoAntes`, lido
   do SERVIDOR — a cópia do celular sem sinal responde "vazio" sem errar) e
   isso é gravado, mas só depois de o banco confirmar o dia de hoje.
-- O relatório: o número no título de cada tipo é quantas estão FUNCIONANDO
-  (dois dígitos), e debaixo vêm só as paradas e as em manutenção.
+- O relatório: o número no título de cada tipo é quantas estão LIBERADAS
+  (dois dígitos); debaixo vêm as paradas, as em manutenção e as liberadas
+  que tenham observação.
+- A observação fica até a pessoa apagar: trocar o status NÃO a apaga (já
+  apagou, e quem escrevia em Manutenção e marcava Liberado perdia o texto).
 
 Como a dona trabalha: português, celular, pede curto. Dizer com clareza o que
 foi e o que não foi verificado.

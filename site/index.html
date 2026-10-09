@@ -511,6 +511,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
     return t.indexOf("caminh") === 0 || t.indexOf("pipa") === 0 || t.indexOf("comboio") === 0 || t.indexOf("trator") === 0;
   }
   function nomeParada(tipo){ return ehMasculino(tipo) ? "Parado" : "Parada"; }
+  function nomeLiberado(tipo){ return ehMasculino(tipo) ? "Liberado" : "Liberada"; }
 
   // ---------- Grupos por tipo, na ordem em que foram cadastrados ----------
   function grupos(){
@@ -633,10 +634,9 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
       var it = item(m);
       if (it.s === b.dataset.s) return;
       it.s = b.dataset.s;
-      // A observação vale até o status mudar (a pedido da dona): passa de um
-      // dia para o outro junto com a marcação, e qualquer troca de status a
-      // apaga — o motivo de "Parado" não serve para "Manutenção".
-      delete it.obs;
+      // A observação fica até a pessoa apagar (a dona, em 09/10). Trocar o
+      // status não mexe nela: antes trocar apagava, e quem escrevia em
+      // Manutenção e depois marcava Liberado perdia o que tinha escrito.
       atualizar();
       salvarMaquinas([m.id], 0);
     } else if (b.dataset.apagar){ est.apagando = indice[Number(b.dataset.apagar)].id; montar(); }
@@ -698,22 +698,28 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
       // Debaixo de cada tipo, o estado como subtítulo e as máquinas dele
       // embaixo: primeiro as paradas, depois as em manutenção. As que
       // funcionam aparecem só na conta do título.
-      var por = {parada:[], manut:[], falta:[]};
+      var por = {parada:[], manut:[], ok:[], falta:[]};
       g.maquinas.forEach(function(m){
         var it = est.dia.itens[m.id] || {};
         var e = porChave[it.s];
         if (!e){ por.falta.push("• " + numeroDe(m)); return; }
         tot[e.k]++;
-        if (e.k === "ok"){ ok++; return; }
         var o = (it.obs || "").trim().replace(/\s*\n\s*/g, " ");
+        if (e.k === "ok"){
+          ok++;
+          // Liberada só entra no relatório se tiver observação.
+          if (o) por.ok.push("• " + numeroDe(m) + " - " + o);
+          return;
+        }
         por[e.k].push("• " + numeroDe(m) + (o ? " - " + o : ""));
       });
       // O número do título é quantas estão liberadas, com dois dígitos.
       t.push("", "*" + String(ok).padStart(2, "0") + " " + g.tipo + "*");
       if (por.parada.length) t.push(porChave.parada.marca + " " + nomeParada(g.tipo) + ":", ...por.parada);
       if (por.manut.length) t.push(porChave.manut.marca + " " + porChave.manut.texto + ":", ...por.manut);
+      if (por.ok.length) t.push(porChave.ok.marca + " " + nomeLiberado(g.tipo) + ":", ...por.ok);
       if (por.falta.length) t.push("❔ Sem conferir:", ...por.falta);
-      if (!por.parada.length && !por.manut.length && !por.falta.length) t.push(ehMasculino(g.tipo) ? "Todos liberados ✅" : "Todas liberadas ✅");
+      if (!por.parada.length && !por.manut.length && !por.ok.length && !por.falta.length) t.push(ehMasculino(g.tipo) ? "Todos liberados ✅" : "Todas liberadas ✅");
     });
     return {texto: t.join("\n"), tot: tot};
   }
